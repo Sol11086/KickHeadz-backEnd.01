@@ -1,45 +1,52 @@
-const mysql = require('mysql2/promise');
-const config = require('../config');
 
-const pool = mysql.createPool({
-  host: config.db.host,
-  user: config.db.user,
-  password: config.db.password,
-  database: config.db.database,
-  port: config.db.port || 3306,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+const { Usuario } = require('./modelos/usuario.js');
 
 async function UsuarioList() {
   try {
-    const [rows] = await pool.query(`SELECT * FROM Usuario`);
-    return rows;
+    // SELECT * FROM Usuario  ->  Usuario.findAll()
+    const usuarios = await Usuario.findAll({
+        // Ocultamos la contraseña de la lista
+        attributes: { exclude: ['contrasena'] } 
+    });
+    return usuarios;
   } catch (error) {
     console.error('Error en la consulta:', error);
     throw error;
   }
 }
 
-async function agregarUsuario(nickname, correo, contrasena, fechaNacimiento) {
+async function agregarUsuario(datosUsuario) {
     try {
-        const [rows] = await pool.query(
-            'CALL sp_agregar_usuario(?, ?, ?, ?)',
-            [nickname, correo, contrasena, fechaNacimiento]
-        );
-        return rows;
+        // CALL sp_agregar_usuario(?, ?, ?, ?)  ->  Usuario.create(...)
+        // 'datosUsuario' debe ser un objeto: { nickname, correo, contrasena, fechaNacimiento }
+        const nuevoUsuario = await Usuario.create(datosUsuario);
+        return nuevoUsuario;
     } catch (error) {
         console.error('Error al agregar usuario:', error);
+        // Manejo de error de duplicado (ej. email o nickname ya existen)
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            throw new Error('El correo o nickname ya están registrados.');
+        }
         throw error;
     }
 }
 
 async function loginUsuario(correo) {
-    const [rows] = await pool.query('CALL sp_login_usuario(?)', [correo]);
-    const usuario = rows[0][0];
-    if (!usuario) throw { code: 'USER_NOT_FOUND', message: 'Usuario no encontrado' };
-    return usuario;
+    try {
+        // CALL sp_login_usuario(?)  ->  Usuario.findOne(...)
+        const usuario = await Usuario.findOne({ 
+            where: { correo: correo } 
+        });
+
+        if (!usuario) {
+            throw { code: 'USER_NOT_FOUND', message: 'Usuario no encontrado' };
+        }
+        // Devolvemos el objeto plano (dataValues)
+        return usuario.dataValues;
+    } catch (error) {
+         console.error('Error al buscar usuario:', error);
+         throw error;
+    }
 }
 
 

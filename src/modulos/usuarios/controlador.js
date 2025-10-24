@@ -1,6 +1,8 @@
 const db = require('../../DB/mysql');
 const bcrypt = require('bcrypt');
 const respuesta = require('../../red/respuestas'); 
+const jwt = require('jsonwebtoken');
+const config = require('../../config');
 
 const SALT_ROUNDS = 10;
 const USUARIO = 'Usuario';
@@ -60,34 +62,52 @@ class UsuarioControlador {
 
     async login(req, res) {
         const { correo, contrasena } = req.body;
+        let message;
+        let statusCode;
 
         if (!correo || !contrasena) {
-            return respuesta.error(req, res, 'Faltan datos', 400);
+            return respuesta.error(req, res, 'Ingrese correo y contraseña', 400);
         }
 
         try {
             const usuario = await db.loginUsuario(correo); 
             const match = await bcrypt.compare(contrasena, usuario.contrasena);
             if (!match) {
-                throw new Error('Contraseña incorrecta');
+                message = 'Contraseña incorrecta';  
+                throw new Error('Contraseña incorrecta');                
             }
+
+            // Generar el token JWT
+            const payload = {
+                id: usuario.id_usuario,
+                nickname: usuario.nickname,
+                correo: usuario.correo,
+                monedas: usuario.monedas
+            };
+
+            const token = jwt.sign(
+                payload,      
+                config.jwt.secret, 
+                { expiresIn: '7d' } 
+            );
+            // -------------------------------
 
             delete usuario.contrasena;
             
-            respuesta.success(req, res, { success: true, usuario }, 200);
+            respuesta.success(req, res, { success: true, usuario, token: token }, 200);
 
         } catch (error) {
 
             console.error('Error completo en login:', error);
-            let mensajeError = 'Error en login';
-            let statusCode = 500;
+            if (message === '') message = 'Error en el login';
+            statusCode = 500;
 
             if (error.code === 'USER_NOT_FOUND' || error.message === 'Contraseña incorrecta') {
-                mensajeError = error.message;
+                message = error.message;
                 statusCode = 401;
             }
 
-            return respuesta.error(req, res, mensajeError, statusCode, error);
+            return respuesta.error(req, res, message, statusCode, error);
         }
     }
 }

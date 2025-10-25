@@ -10,8 +10,8 @@ async function main() {
         
         // Usa { force: true } para borrar y recrear (¡CUIDADO!)
         // Usa { alter: true } para intentar modificar tablas existentes.
-        await sequelize.sync({ alter: true }); // 'alter' es más seguro que 'force'
-        console.log('Modelos sincronizados con la Base de Datos.');
+        // (pruebas)await sequelize.sync({ alter: true }); // 'alter' es más seguro que 'force'
+        //console.log('Modelos sincronizados con la Base de Datos.');
 
         // Encendemos el servidor
         app.listen(app.get('port'), () => {

@@ -1,6 +1,6 @@
 const db = require('../../DB/mysql');
 const bcrypt = require('bcrypt');
-const respuesta = require('../../red/respuestas'); 
+const respuesta = require('../../red/respuestas');
 const jwt = require('jsonwebtoken');
 const config = require('../../config');
 
@@ -13,6 +13,7 @@ class UsuarioControlador {
         // Asignación de métodos para mantener el contexto 'this'
         this.UsuarioList = this.UsuarioList.bind(this);
         this.registrarUsuario = this.registrarUsuario.bind(this);
+        this.actualizarUsuario = this.actualizarUsuario.bind(this);
         this.login = this.login.bind(this);
     }
 
@@ -51,12 +52,66 @@ class UsuarioControlador {
                 contrasena: hash,
                 fechaNacimiento: fechaNacimiento
             });
-            
+
             respuesta.success(req, res, 'Usuario registrado correctamente', 201);
 
         } catch (error) {
             console.error('Error completo:', error);
             respuesta.error(req, res, error.message || 'Error registrando usuario', 500, error);
+        }
+    }
+
+    async actualizarUsuario(req, res) {
+        const { id_usuario, nickname, correo, contrasena, fechaNacimiento, monedas } = req.body;
+
+        if (!id_usuario || !nickname || !correo || !contrasena || !fechaNacimiento || monedas === undefined) {
+            return respuesta.error(req, res, 'Faltan datos', 400);
+        }
+
+        try {
+
+            if (!this._validarContrasena(contrasena)) {
+                throw new Error('La contraseña debe tener al menos 6 caracteres, una mayúscula, un número y un carácter especial.');
+            }
+
+            const hash = await bcrypt.hash(contrasena, SALT_ROUNDS);
+            await db.actualizarUsuario(id_usuario, {
+                nickname: nickname,
+                correo: correo,
+                contrasena: hash,
+                monedas: monedas,
+                fechaNacimiento: fechaNacimiento,
+            });
+
+            const usuarioActualizado = await db.obtenerUsuarioPorId(id_usuario);
+            delete usuarioActualizado.contrasena;
+
+            // Generar nuevo token JWT
+            const payload = {
+                id: usuarioActualizado.id_usuario,
+                nickname: usuarioActualizado.nickname,
+                correo: usuarioActualizado.correo,
+                monedas: usuarioActualizado.monedas
+            };
+            const token = jwt.sign(
+                payload,
+                config.jwt.secret,
+                { expiresIn: '7d' }
+            );
+
+            // -------------------------------
+
+            const bodyRespuesta = {
+                message: 'Usuario actualizado correctamente',
+                token: token,
+                usuario: usuarioActualizado
+            };
+
+            respuesta.success(req, res, bodyRespuesta, 200);
+
+        } catch (error) {
+            console.error('Error completo:', error);
+            respuesta.error(req, res, error.message || 'Error actualizando usuario', 500, error);
         }
     }
 
@@ -70,11 +125,11 @@ class UsuarioControlador {
         }
 
         try {
-            const usuario = await db.loginUsuario(correo); 
+            const usuario = await db.loginUsuario(correo);
             const match = await bcrypt.compare(contrasena, usuario.contrasena);
             if (!match) {
-                message = 'Contraseña incorrecta';  
-                throw new Error('Contraseña incorrecta');                
+                message = 'Contraseña incorrecta';
+                throw new Error('Contraseña incorrecta');
             }
 
             // Generar el token JWT
@@ -86,14 +141,14 @@ class UsuarioControlador {
             };
 
             const token = jwt.sign(
-                payload,      
-                config.jwt.secret, 
-                { expiresIn: '7d' } 
+                payload,
+                config.jwt.secret,
+                { expiresIn: '7d' }
             );
             // -------------------------------
 
             delete usuario.contrasena;
-            
+
             respuesta.success(req, res, { success: true, usuario, token: token }, 200);
 
         } catch (error) {

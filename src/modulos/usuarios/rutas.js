@@ -5,6 +5,7 @@ const auth = require('../../auth/jwt');
 const router = express.Router();
 
 router.get('/', auth.verificarToken, controlador.UsuarioList);
+router.put('/actualizar', auth.verificarToken, controlador.actualizarUsuario);
 
 router.post('/registrar', controlador.registrarUsuario);
 router.post('/login', controlador.login);

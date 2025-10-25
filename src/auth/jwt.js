@@ -9,13 +9,12 @@ function verificarToken(req, res, next) {
         return respuesta.error(req, res, 'Acceso denegado (No hay token)', 401);
     }
 
-    const token = authHeader.split(' ')[1]; // Separar 'Bearer' del token
+    const token = authHeader.split(' ')[1]; 
 
     if (!token) {
         return respuesta.error(req, res, 'Acceso denegado (Token mal formado)', 401);
     }
 
-    // Verificar el token
     try {
         const payloadVerificado = jwt.verify(token, config.jwt.secret);      
         req.user = payloadVerificado;     

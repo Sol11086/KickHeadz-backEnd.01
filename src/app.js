@@ -5,6 +5,7 @@ const config = require('./config')
 const usuarios = require('./modulos/usuarios/rutas')
 const partidos = require('./modulos/partidos/rutas');
 const tienda = require('./modulos/tienda/rutas');
+const logros = require('./modulos/logros/rutas');
 
 const app = express();
 
@@ -15,6 +16,6 @@ app.use(express.json());
 app.use('/api/usuarios',usuarios)
 app.use('/api/partidos', partidos);
 app.use('/api/tienda', tienda);
-
+app.use('/api/logros', logros);
 
 module.exports = app;

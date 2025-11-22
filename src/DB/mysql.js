@@ -3,6 +3,8 @@ const { Usuario } = require('./modelos/usuario.js');
 const { Partido } = require('./modelos/partido.js');
 const { UsuarioPersonaje } = require('./modelos/usuario_personaje');
 const { Personaje } = require('./modelos/personaje');
+const { Logro } = require('./modelos/logro'); 
+const { UsuarioLogro } = require('./modelos/usuario_logro');
 
 async function recompensaMonedas(tabla, id_usuario, cantidad) {
     try {
@@ -146,7 +148,6 @@ async function registrarCompra(id_usuario, id_personaje) {
     }
 }
 
-// Función auxiliar para traer TODOS los IDs de personajes que tiene un usuario
 async function obtenerMisPersonajes(id_usuario) {
     try {
         const registros = await UsuarioPersonaje.findAll({
@@ -158,6 +159,35 @@ async function obtenerMisPersonajes(id_usuario) {
     } catch (error) {
         throw error;
     }
+}
+
+// --- LOGROS ---
+
+async function obtenerTodosLogros() {
+    return await Logro.findAll();
+}
+
+async function obtenerMisLogrosIds(id_usuario) {
+    const registros = await UsuarioLogro.findAll({
+        where: { id_usuario },
+        attributes: ['id_logro']
+    });
+    return registros.map(r => r.id_logro);
+}
+
+async function tieneLogro(id_usuario, id_logro) {
+    const registro = await UsuarioLogro.findOne({
+        where: { id_usuario, id_logro }
+    });
+    return !!registro;
+}
+
+async function otorgarLogro(id_usuario, id_logro) {
+    return await UsuarioLogro.create({ id_usuario, id_logro });
+}
+
+async function obtenerLogroPorId(id_logro) {
+    return await Logro.findByPk(id_logro);
 }
 
 
@@ -173,5 +203,10 @@ module.exports = {
     verificarPosesion,
     obtenerPersonaje,
     registrarCompra,
-    obtenerMisPersonajes
+    obtenerMisPersonajes,
+    obtenerTodosLogros,
+    obtenerMisLogrosIds,
+    tieneLogro,
+    otorgarLogro,
+    obtenerLogroPorId
 };

@@ -6,6 +6,8 @@ const config = require('../../config');
 
 const SALT_ROUNDS = 10;
 const USUARIO = 'Usuario';
+const TABLA = 'usuarios';
+
 
 class UsuarioControlador {
 
@@ -15,6 +17,7 @@ class UsuarioControlador {
         this.registrarUsuario = this.registrarUsuario.bind(this);
         this.actualizarUsuario = this.actualizarUsuario.bind(this);
         this.login = this.login.bind(this);
+        this.recompensa = this.recompensa.bind(this);
     }
 
     _validarContrasena(contrasena) {
@@ -163,6 +166,34 @@ class UsuarioControlador {
             }
 
             return respuesta.error(req, res, message, statusCode, error);
+        }
+    }
+
+    async recompensa(req, res) {
+        try {
+            let id_usuario = req.user ? req.user.id : null;
+
+            if (!id_usuario && req.body.id_usuario) {
+                id_usuario = req.body.id_usuario;
+            }
+            const cantidad = req.body.cantidad;
+
+            if (!id_usuario) {
+                throw new Error('No se identificó al usuario para la recompensa');
+            }
+
+            await db.recompensaMonedas(TABLA, id_usuario, cantidad);
+
+            const usuarioActualizado = await db.obtenerUsuarioPorId(id_usuario);
+
+            respuesta.success(req, res, {
+                success: true,
+                message: 'Recompensa entregada',
+                usuario: usuarioActualizado
+            }, 200);
+
+        } catch (error) {
+            respuesta.error(req, res, 'Error al entregar recompensa', 500, error);
         }
     }
 }
